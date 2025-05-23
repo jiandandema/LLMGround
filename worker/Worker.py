@@ -1,5 +1,7 @@
 from vllm import LLM
 
+from worker.BaseWorker import BaseWorker
+
 
 class Worker(BaseWorker):
     def __init__(self, host, port, model, served_model_name):
