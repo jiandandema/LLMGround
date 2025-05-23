@@ -53,4 +53,21 @@ class BaseWorker:
         assert r.status_code == 200
     
     def send_heart_beat(self):
-        pass
+        url = self.controller_addr + "/receive_heart_beat"
+        
+        while True:
+            try:
+                ret = requests.post(
+                    url,
+                    json={
+                        "worker_name": self.worker_addr,
+                        "queue_length": self.get_queue_length(),
+                    },
+                    timeout=5,
+                )
+                exist = ret.json()["exist"]
+                break
+            except (requests.exceptions.RequestException, KeyError) as e:
+                # logger.error(f"heart beat error: {e}")
+                pass
+            time.sleep(5)
