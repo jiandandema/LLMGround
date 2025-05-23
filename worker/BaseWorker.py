@@ -71,3 +71,17 @@ class BaseWorker:
                 # logger.error(f"heart beat error: {e}")
                 pass
             time.sleep(5)
+    
+    def get_queue_length(self):
+        if self.semaphore is None:
+            return 0
+        else:
+            sempahore_value = (
+                self.semaphore._value
+                if self.semaphore._value is not None
+                else self.limit_worker_concurrency
+            )
+            waiter_count = (
+                0 if self.semaphore._waiters is None else len(self.semaphore._waiters)
+            )
+            return self.limit_worker_concurrency - sempahore_value + waiter_count
