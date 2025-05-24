@@ -11,6 +11,6 @@ class Worker(BaseWorker):
         self.served_model_name = served_model_name
         self.llm = LLM(model=self.model)
         # print(self.generate(prompt="你好"))
-    
+
     def generate(self, prompt):
         return self.llm.generate(prompt)

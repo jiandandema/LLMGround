@@ -1,11 +1,13 @@
 import asyncio
 import threading
 import time
-
 from fastapi import requests
 
+
 class BaseWorker:
-    def __init__(self, host, port, model, served_model_name, limit_worker_concurrency=1024):
+    def __init__(
+        self, host, port, model, served_model_name, limit_worker_concurrency=1024
+    ):
         self.host = host
         self.port = port
         self.model = model
@@ -14,16 +16,15 @@ class BaseWorker:
         self.limit_worker_concurrency = limit_worker_concurrency
         self.heart_beat_thread = None
 
-    
     def invoke(self, prompt):
         raise NotImplementedError
 
     def stream(self, prompt):
         raise NotImplementedError
-    
+
     def embed(self, str):
         raise NotImplementedError
-    
+
     def release_worker_semaphore(self):
         self.semaphore.release()
 
@@ -35,32 +36,34 @@ class BaseWorker:
             while True:
                 time.sleep(5)
                 obj.send_heart_beat()
+
         self.register_to_contoller()
-        self.heart_beat_thread = threading.Thread(target=heart_beat_worker, args=(self,), daemon=True)
+        self.heart_beat_thread = threading.Thread(
+            target=heart_beat_worker, args=(self,), daemon=True
+        )
         self.heart_beat_thread.start()
-    
+
     def register_to_contoller(self):
         url = self.controller_addr + "/register_worker"
         # data = {
-        #     "worker_name": self.worker_addr,
+        #     "worker_addr": self.worker_addr,
         #     "check_heart_beat": True,
         #     "worker_status": self.get_status(),
-        #     "multimodal": self.multimodal,
         # }
         # 这里需要根据我制定的协议来发送数据
         data = {}
         r = requests.post(url, json=data)
         assert r.status_code == 200
-    
+
     def send_heart_beat(self):
         url = self.controller_addr + "/receive_heart_beat"
-        
+
         while True:
             try:
                 ret = requests.post(
                     url,
                     json={
-                        "worker_name": self.worker_addr,
+                        "worker_addr": self.worker_addr,
                         "queue_length": self.get_queue_length(),
                     },
                     timeout=5,
@@ -70,8 +73,8 @@ class BaseWorker:
             except (requests.exceptions.RequestException, KeyError) as e:
                 # logger.error(f"heart beat error: {e}")
                 pass
-            time.sleep(5)
-    
+            time.sleep(1)
+
     def get_queue_length(self):
         if self.semaphore is None:
             return 0
