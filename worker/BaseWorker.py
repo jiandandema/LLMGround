@@ -3,18 +3,23 @@ import threading
 import time
 from fastapi import requests
 
+from dataModels.WorkerHeartBeatInfo import WorkerHeartBeatInfo
+from dataModels.WorkerInfo import WorkerInfo
+from logger.logger import logger
 
 class BaseWorker:
     def __init__(
-        self, host, port, model, served_model_name, limit_worker_concurrency=1024
+        self, host, port, model_path, served_model_name, controller_addr, limit_worker_concurrency=1024
     ):
         self.host = host
         self.port = port
-        self.model = model
+        self.model_path = model_path
         self.served_model_name = served_model_name
         self.semaphore = asyncio.Semaphore(self.limit_worker_concurrency)
         self.limit_worker_concurrency = limit_worker_concurrency
         self.heart_beat_thread = None
+        self.worker_addr = f"http://{self.host}:{self.port}"
+        self.controller_addr = controller_addr
 
     def invoke(self, prompt):
         raise NotImplementedError
@@ -45,14 +50,11 @@ class BaseWorker:
 
     def register_to_contoller(self):
         url = self.controller_addr + "/register_worker"
-        # data = {
-        #     "worker_addr": self.worker_addr,
-        #     "check_heart_beat": True,
-        #     "worker_status": self.get_status(),
-        # }
-        # 这里需要根据我制定的协议来发送数据
-        data = {}
-        r = requests.post(url, json=data)
+        register_worker_info = WorkerInfo(
+            worker_addr=self.worker_addr,
+            worker_status=self.get_status(),
+        )
+        r = requests.post(url, json=register_worker_info.model_dump())
         assert r.status_code == 200
 
     def send_heart_beat(self):
@@ -60,12 +62,13 @@ class BaseWorker:
 
         while True:
             try:
+                heart_beat_info = WorkerHeartBeatInfo(
+                    worker_addr=self.worker_addr,
+                    queue_length=self.get_queue_length()
+                )
                 ret = requests.post(
                     url,
-                    json={
-                        "worker_addr": self.worker_addr,
-                        "queue_length": self.get_queue_length(),
-                    },
+                    json=heart_beat_info.model_dump(),
                     timeout=5,
                 )
                 exist = ret.json()["exist"]

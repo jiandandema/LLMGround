@@ -1093,6 +1093,7 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "fastapi" },
+    { name = "pydantic" },
     { name = "ruff" },
     { name = "setuptools" },
     { name = "tool" },
@@ -1103,6 +1104,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.115.12" },
+    { name = "pydantic", specifier = ">=2.11.4" },
     { name = "ruff", specifier = ">=0.11.11" },
     { name = "setuptools", specifier = ">=80.8.0" },
     { name = "tool", specifier = ">=0.8.0" },
