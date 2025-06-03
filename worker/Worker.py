@@ -4,13 +4,10 @@ from worker.BaseWorker import BaseWorker
 
 
 class Worker(BaseWorker):
-    def __init__(self, host, port, model, served_model_name):
-        self.host = host
-        self.port = port
-        self.model = model
-        self.served_model_name = served_model_name
-        self.llm = LLM(model=self.model)
-        # print(self.generate(prompt="你好"))
+    def __init__(self, host, port, model, served_model_name, controller_addr):
+        super().__init__(host, port, model, served_model_name, controller_addr)
+        self.llm = LLM(model=model, device="cpu")
+        print(self.generate(prompt="hello"))
 
     def generate(self, prompt):
         return self.llm.generate(prompt)

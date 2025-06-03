@@ -1,8 +1,10 @@
 import argparse
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from pydantic import BaseModel
 import uvicorn
-from Controller import Controller
+from .Controller import Controller
+from dataModels.WorkerHeartBeatInfo import WorkerHeartBeatInfo
+from dataModels.WorkerInfo import WorkerInfo
 from logger.logger import logger
 # 创建 FastAPI 应用
 app = FastAPI()
@@ -16,13 +18,13 @@ class GenerateRequest(BaseModel):
 async def root():
     return {"message": "Controller服务已启动！"}
 
-@app.post("/register")
-async def register_worker():
-    return
+@app.post("/register_worker")
+async def register_worker(request: Request, worker_info: WorkerInfo):
+    return await controller.register_worker(info=worker_info)
 
-@app.post("/heart_beat")
-async def recv_heart_beat():
-    return
+@app.post("/receive_heart_beat")
+async def recv_heart_beat(request: Request, worker_heart_beat_info: WorkerHeartBeatInfo):
+    return await controller.receive_heart_beat(info=worker_heart_beat_info)
 
 
 if __name__ == "__main__":
@@ -33,6 +35,6 @@ if __name__ == "__main__":
 
     logger.info(f"启动controller服务器: {args.host}:{args.port}")
 
-    worker = Controller(args.host, args.port)
+    controller = Controller(args.host, args.port)
 
     uvicorn.run(app, host=args.host, port=args.port)

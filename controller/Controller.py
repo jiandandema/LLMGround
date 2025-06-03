@@ -2,8 +2,8 @@ import random
 import time
 import threading
 from typing import Dict
-
-from fastapi import requests
+import requests
+from dataModels.Response import Response
 from dataModels.WorkerInfo import WorkerInfo
 from dataModels.WorkerHeartBeatInfo import WorkerHeartBeatInfo
 from logger.logger import logger
@@ -14,31 +14,48 @@ class Controller:
         self.port = port
         self.controller_addr = f"http://{self.host}:{self.port}"
         self.workers_dict: Dict[str, WorkerInfo] = {}
+        self.expired_check()
 
-    def register_worker(self, info: WorkerInfo):
-        if info.worker_addr in self.workers_dict:
-            logger.info(f"update exist worker {info.worker_addr} register info")
-        else:
-            logger.info(f"register new worker {info.worker_addr} register info")
-        self.workers_dict[info.worker_addr] = info
-        logger.info(f"register worker {info.worker_addr} register info success")
+    async def register_worker(self, info: WorkerInfo):
+        try:
+            if info.worker_addr in self.workers_dict:
+                logger.info(f"update exist worker {info.worker_addr} register info")
+            else:
+                logger.info(f"register new worker {info.worker_addr} register info")
+            self.workers_dict[info.worker_addr] = info
+            msg = f"register worker {info.worker_addr} register info success"
+            logger.info(msg)
+            return Response(code=1, msg=msg)
+        except Exception as e:
+            msg = f"register worker {info.worker_addr} register info failed: {e}"
+            logger.error(msg)
+            return Response(code=0, msg=msg)
     
-    def receive_heart_beat(self, info: WorkerHeartBeatInfo):
-        if info.worker_addr not in self.workers_dict:
-            logger.warning(f"worker {info.worker_addr} not registered")
-            return
-        self.workers_dict[info.worker_addr].worker_status.queue_length = info.queue_length
-        self.workers_dict[info.worker_addr].last_heart_beat_time = time.time()
-        logger.info(f"receive heart beat from {info.worker_addr}")
+    async def receive_heart_beat(self, info: WorkerHeartBeatInfo):
+        try:
+            if info.worker_addr not in self.workers_dict:
+                logger.warning(f"worker {info.worker_addr} not registered")
+            self.workers_dict[info.worker_addr].worker_status.queue_length = info.queue_length
+            self.workers_dict[info.worker_addr].last_heart_beat_time = time.time()
+            msg = f"receive heart beat from {info.worker_addr}"
+            logger.info(msg)
+            return Response(code=1, msg=msg)
+        except Exception as e:
+            msg = f"receive heart beat from {info.worker_addr} failed: {e}"
+            logger.error(msg)
+            return Response(code=0, msg=msg)
     
     def expired_check(self):
         def del_worker_expired():
             while True:
                 time.sleep(5)
+                del_list = []
                 for worker_addr, worker_info in self.workers_dict.items():
                     if time.time() - worker_info.last_heart_beat_time > 20:
-                        logger.warning(f"worker {worker_addr} expired")
-                        del self.workers_dict[worker_addr]
+                        logger.warning(f"worker {worker_addr} expired{time.time()} {worker_info.last_heart_beat_time} {time.time() - worker_info.last_heart_beat_time}")
+                        del_list.append(worker_addr)
+                for worker_addr in del_list:
+                    del self.workers_dict[worker_addr]
         thread = threading.Thread(target=del_worker_expired, daemon=True)
         thread.start()
 

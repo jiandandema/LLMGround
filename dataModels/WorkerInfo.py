@@ -8,4 +8,4 @@ class WorkerStatus(BaseModel):
 class WorkerInfo(BaseModel):
     worker_addr: str
     worker_status: WorkerStatus
-    last_heart_beat_time: int = -1
+    last_heart_beat_time: float = -1

@@ -1,10 +1,10 @@
 import asyncio
 import threading
 import time
-from fastapi import requests
+import requests
 
 from dataModels.WorkerHeartBeatInfo import WorkerHeartBeatInfo
-from dataModels.WorkerInfo import WorkerInfo
+from dataModels.WorkerInfo import WorkerInfo, WorkerStatus
 from logger.logger import logger
 
 class BaseWorker:
@@ -15,11 +15,12 @@ class BaseWorker:
         self.port = port
         self.model_path = model_path
         self.served_model_name = served_model_name
-        self.semaphore = asyncio.Semaphore(self.limit_worker_concurrency)
         self.limit_worker_concurrency = limit_worker_concurrency
+        self.semaphore = asyncio.Semaphore(self.limit_worker_concurrency)
         self.heart_beat_thread = None
         self.worker_addr = f"http://{self.host}:{self.port}"
         self.controller_addr = controller_addr
+        self.init_heart_beat()
 
     def invoke(self, prompt):
         raise NotImplementedError
@@ -39,7 +40,7 @@ class BaseWorker:
     def init_heart_beat(self):
         def heart_beat_worker(obj):
             while True:
-                time.sleep(5)
+                time.sleep(10)
                 obj.send_heart_beat()
 
         self.register_to_contoller()
@@ -53,6 +54,7 @@ class BaseWorker:
         register_worker_info = WorkerInfo(
             worker_addr=self.worker_addr,
             worker_status=self.get_status(),
+            last_heart_beat_time=time.time()
         )
         r = requests.post(url, json=register_worker_info.model_dump())
         assert r.status_code == 200
@@ -71,12 +73,11 @@ class BaseWorker:
                     json=heart_beat_info.model_dump(),
                     timeout=5,
                 )
-                exist = ret.json()["exist"]
                 break
             except (requests.exceptions.RequestException, KeyError) as e:
                 # logger.error(f"heart beat error: {e}")
                 pass
-            time.sleep(1)
+            time.sleep(10)
 
     def get_queue_length(self):
         if self.semaphore is None:
@@ -91,3 +92,9 @@ class BaseWorker:
                 0 if self.semaphore._waiters is None else len(self.semaphore._waiters)
             )
             return self.limit_worker_concurrency - sempahore_value + waiter_count
+
+    def get_status(self):
+        return WorkerStatus(
+            model_name=self.served_model_name,
+            queue_length=self.get_queue_length()
+        )
