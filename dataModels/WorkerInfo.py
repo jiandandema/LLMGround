@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 
+
 class WorkerStatus(BaseModel):
     model_name: str
     queue_length: int
