@@ -7,9 +7,16 @@ from dataModels.WorkerHeartBeatInfo import WorkerHeartBeatInfo
 from dataModels.WorkerInfo import WorkerInfo, WorkerStatus
 from logger.logger import logger
 
+
 class BaseWorker:
     def __init__(
-        self, host, port, model_path, served_model_name, controller_addr, limit_worker_concurrency=1024
+        self,
+        host,
+        port,
+        model_path,
+        served_model_name,
+        controller_addr,
+        limit_worker_concurrency=1024,
     ):
         self.host = host
         self.port = port
@@ -54,7 +61,7 @@ class BaseWorker:
         register_worker_info = WorkerInfo(
             worker_addr=self.worker_addr,
             worker_status=self.get_status(),
-            last_heart_beat_time=time.time()
+            last_heart_beat_time=time.time(),
         )
         r = requests.post(url, json=register_worker_info.model_dump())
         assert r.status_code == 200
@@ -65,8 +72,7 @@ class BaseWorker:
         while True:
             try:
                 heart_beat_info = WorkerHeartBeatInfo(
-                    worker_addr=self.worker_addr,
-                    queue_length=self.get_queue_length()
+                    worker_addr=self.worker_addr, queue_length=self.get_queue_length()
                 )
                 ret = requests.post(
                     url,
@@ -95,6 +101,5 @@ class BaseWorker:
 
     def get_status(self):
         return WorkerStatus(
-            model_name=self.served_model_name,
-            queue_length=self.get_queue_length()
+            model_name=self.served_model_name, queue_length=self.get_queue_length()
         )
