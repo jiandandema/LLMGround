@@ -40,4 +40,4 @@ class Worker(BaseWorker):
             yield text
 
     def embed(self, prompt):
-        return self.model.embed(prompt)
+        return self.model.embed(prompt)[0].outputs.embedding

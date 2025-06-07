@@ -1,17 +1,15 @@
 import argparse
 from fastapi import FastAPI
-from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from fastapi.responses import StreamingResponse, JSONResponse
 import uvicorn
+
+from dataModels.Response import Response
+from dataModels.Request import EmbedRequest, GenerateRequest
 from .Worker import Worker
 from logger.logger import logger
 
 # 创建 FastAPI 应用
 app = FastAPI()
-
-
-class GenerateRequest(BaseModel):
-    prompt: str
 
 
 @app.get("/")
@@ -25,19 +23,26 @@ async def generate(request: GenerateRequest):
     return StreamingResponse(generator)
 
 
+@app.post("/worker_embed")
+async def embed(request: EmbedRequest):
+    res = worker.embed(request.prompt)
+    response = Response(data={"embed": res})
+    return JSONResponse(response.model_dump())
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", type=str, default="127.0.0.1", help="服务器主机地址")
     parser.add_argument("--port", type=int, default=8000, help="服务器端口号")
     parser.add_argument(
-        "--model",
-        type=str,
-        default="facebook/opt-125m",
-        help="模型名称",
         # "--model",
         # type=str,
-        # default="jinaai/jina-embeddings-v3",
+        # default="facebook/opt-125m",
         # help="模型名称",
+        "--model",
+        type=str,
+        default="jinaai/jina-embeddings-v3",
+        help="模型名称",
     )
     parser.add_argument(
         "--served-model-name",
@@ -54,7 +59,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--task",
         type=str,
-        default="generate",
+        default="embed",
         help="任务类型",
     )
     parser.add_argument(
